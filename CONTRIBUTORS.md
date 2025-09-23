@@ -1,0 +1,3 @@
+- [Brooke Medley (NASA Goddard Space Flight Center)](https://science.gsfc.nasa.gov/sci/bio/brooke.c.medley)
+- [Matt Siegfried (Colorado School of Mines)](https://geophysics.mines.edu/project/siegfried-matthew/)
+- [Tyler Sutterley (University of Washington)](http://psc.apl.uw.edu/people/investigators/tyler-sutterley/)

@@ -1,0 +1,27 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: convert-EOFs
+message: Python tools for processing EOFs to be consistent with GRACE/GRACE-FO estimates
+type: software
+authors:
+  - given-names: Tyler
+    family-names: Sutterley
+    affiliation: University of Washington, Applied Physics Laboratory
+  - given-names: Matthew
+    family-names: Siegfried
+    affiliation: Colorado School of Mines
+  - given-names: Brooke
+    family-names: Medley
+    affiliation: NASA Goddard Space Flight Center
+repository-code: 'https://github.com/tsutterley/convert-EOFs'
+version: "0.0.1"
+date-released: "2025-09-23"
+keywords:
+  - GRACE/GRACE-FO
+  - ICESat-2
+  - GSFC-FDM
+  - spherical harmonics
+  - satellite geodesy
+license: MIT
