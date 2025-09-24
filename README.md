@@ -2,9 +2,11 @@
 
 [![License](https://img.shields.io/github/license/tsutterley/convert-EOFs)](https://github.com/tsutterley/convert-EOFs/blob/main/LICENSE)
 
-Python tools for ``ruining'' EOFs as described in Medley, Sutterley and Siegfried (2025).
+Python tools for "ruining" EOFs as described in Medley, Sutterley and Siegfried (2025).
 
 For more information on the background processing: see the documentation at [gravity-toolkit.readthedocs.io](https://gravity-toolkit.readthedocs.io/)
+
+For more information on the included programs: see the [API Reference](./convert_eofs/README.md)
 
 ## Installation with Pixi
 
