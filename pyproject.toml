@@ -73,7 +73,7 @@ default = { solve-group = "default" }
 boto3 = "*"
 future = "*"
 lxml = "*"
-matplotlib = "*"
+matplotlib-base = "*"
 netcdf4 = "*"
 numpy = "*"
 python-dateutil = "*"
