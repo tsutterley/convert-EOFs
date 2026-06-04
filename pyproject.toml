@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -20,7 +20,8 @@ authors = [
 maintainers = [
     {name = "convert-EOFs contributors"}
 ]
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 readme = {file = "README.md", content-type = "text/markdown"}
 
 requires-python = "~=3.9"
@@ -29,7 +30,6 @@ dependencies = [ "gravity-toolkit", "model-harmonics", "geoid-toolkit"]
 classifiers=[
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
@@ -50,6 +50,7 @@ Issues = "https://github.com/tsutterley/convert-EOFs/issues"
 "convert_elastic_heights.py" = "convert_eofs.convert_elastic_heights:main" 
 "convert_height_eofs.py" = "convert_eofs.convert_height_eofs:main" 
 "convert_smb_fac_eofs.py" = "convert_eofs.convert_smb_fac_eofs:main" 
+"convert_longterm_eofs.py" = "convert_eofs.convert_longterm_eofs:main" 
 
 [tool.setuptools.packages.find]
 exclude = ["run*",]

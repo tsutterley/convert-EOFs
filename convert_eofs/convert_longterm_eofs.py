@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-convert_elastic_heights.py
+convert_longterm_eofs.py
 Written by Tyler Sutterley (03/2023)
-Read height variables and convert to spherical harmonics
+Read SMB and FAC EOFs and convert to spherical harmonics
 Convert back into the spatial domain after truncation and smoothing
 """
 
@@ -21,6 +21,7 @@ import warnings
 import numpy as np
 import gravity_toolkit as gravtk
 import model_harmonics as mdlhmc
+from convert_eofs.harmonics import harmonics
 
 # ignore pyproj and divide by zero warnings
 warnings.filterwarnings("ignore")
@@ -109,51 +110,62 @@ def mosaic_ATL15(filenames, group="delta_h", fields=["ice_area"]):
     return output
 
 
-def convert_elastic_heights(
-    INPUT_FILE,
+def convert_longterm_eofs(
+    EOF_FILE,
     LMAX,
     MMAX=None,
     RAD=0,
     MASKS=None,
+    GRID="GSFC",
     ATL15=None,
     BUFFER=800e3,
     MODE=0o775,
 ):
     # verify input file
-    INPUT_FILE = pathlib.Path(INPUT_FILE).expanduser().absolute()
-    if not INPUT_FILE.exists():
-        raise FileNotFoundError("File not found in file system")
-    # read height file and extract variables
-    regex_pattern = r"^(.*?)(ais|gris)(.*?).nc$"
-    PREFIX, REGION, AUX = re.findall(regex_pattern, INPUT_FILE.name).pop()
-    logging.info(str(INPUT_FILE))
-    logging.debug(f"Region:{REGION}")
-    fileID = netCDF4.Dataset(INPUT_FILE, mode="r")
+    EOF_FILE = pathlib.Path(EOF_FILE).expanduser().absolute()
+    if not EOF_FILE.exists():
+        raise FileNotFoundError("EOF file not found in file system")
+    # read EOF file and extract variables
+    regex_pattern = (
+        r"(GSFC|GEMB|IMAU)(.*?)_EOF_SMB_FAC_(.*?)(sep_)?(ais|gris)(.*?).nc$"
+    )
+    MODEL, AUX1, AUX2, SEP, REGION, AUX3 = re.findall(
+        regex_pattern, EOF_FILE.name
+    ).pop()
+    logging.info(str(EOF_FILE))
+    logging.debug(f"Model:{MODEL}")
+    logging.debug(f"Region:{SEP}{REGION}")
+    fileID = netCDF4.Dataset(EOF_FILE, mode="r")
     fd = {}
+    for key, val in fileID.dimensions.items():
+        fd[key] = np.arange(val.size)
     for key, val in fileID.variables.items():
         fd[key] = val[:]
-    # variable fields (check if additional error fields)
-    fields = sorted(
-        set(fileID.variables.keys()) - set(fileID.dimensions.keys())
-    )
-    logging.debug(f"fields:{','.join(fields)}")
+    # invalid data value
+    fv = np.float64(fileID.variables["EOF_SMB"]._FillValue)
     # fix Greenland ATL15 coordinates
     dx = np.abs(fd["x"][1] - fd["x"][0])
-    if (REGION.lower() == "gris") and (dx != 10e3):
+    if (GRID == "ATL15") and (REGION.lower() == "gris") and (dx != 10e3):
         fd["x"] = fd["x"][0] + 10e3 * np.arange(len(fd["x"]))
-    # fix times
-    fd["t"] = fd["t"].astype(float)
-    fd["t"] += np.roll(np.arange(len(fd["t"])) % 12 + 1.0, -9) / 12.0
     # calculate grid areas (assume fully ice covered)
     dx = np.abs(fd["x"][1] - fd["x"][0])
     dy = np.abs(fd["y"][1] - fd["y"][0])
-    # input shape of input data
-    nt, ny, nx = np.shape(fd["h_el"])
-    shape = (ny, nx)
-    output_shape = (ny + int(2 * BUFFER // dy), nx + int(2 * BUFFER // dx))
-    indexing = "xy"
+    # input shape of EOF data
+    if GRID == "ATL15":
+        _, ny, nx = np.shape(fd["EOF_SMB"])
+        shape = (ny, nx)
+        output_shape = (ny + int(2 * BUFFER // dy), nx + int(2 * BUFFER // dx))
+        indexing = "xy"
+    else:
+        _, nx, ny = np.shape(fd["EOF_SMB"])
+        shape = (nx, ny)
+        output_shape = (nx + int(2 * BUFFER // dx), ny + int(2 * BUFFER // dy))
+        indexing = "ij"
     logging.debug(f"Shape: {shape}")
     logging.debug(f"Output shape: {output_shape}")
+    # input area grids
+    fd["area"] = np.zeros((shape))
+    fd["area"][:, :] = dx * dy
     # extract x and y coordinate arrays
     xg, yg = np.meshgrid(fd["x"], fd["y"], indexing=indexing)
     # close the netCDF4 file
@@ -170,8 +182,8 @@ def convert_elastic_heights(
         fileID = netCDF4.Dataset(mask_file, mode="r")
         fd["mask"] |= fileID.variables["mask"][:].astype(bool)
         fileID.close()
-    # indices of valid data
-    fd["mask"] &= np.any(np.isfinite(fd["h_el"]), axis=0)
+    # indices of valid EOF data
+    fd["mask"] &= fd["EOF_SMB"].data[0, :, :] != fv
 
     # pyproj transformer for converting to input coordinates (EPSG)
     MODEL_EPSG = set_projection(REGION)
@@ -197,8 +209,15 @@ def convert_elastic_heights(
     # polar stereographic standard parallel (latitude of true scale)
     reference_latitude = crs2.to_dict().pop("lat_ts")
 
+    # EOF dimension for output variables
+    dims = {
+        "EOF_SMB": "mode_smb",
+        "EOF_FAC": "mode_fac",
+        "MEAN_SMB": "const_smb",
+        "MEAN_FAC": "const_fac",
+    }
     # output as buffered grid
-    output = dict(time=np.copy(fd["t"]))
+    output = {}
     xmin, xmax = (fd["x"].min() - BUFFER, fd["x"].max() + BUFFER)
     ymin, ymax = (fd["y"].min() - BUFFER, fd["y"].max() + BUFFER)
     output["x"] = np.arange(xmin, xmax + dx, dx)
@@ -212,6 +231,9 @@ def convert_elastic_heights(
     buffer_latitude_geocentric = mdlhmc.spatial.geocentric_latitude(
         bufferlon, bufferlat, a_axis=a_axis, flat=flat
     )
+    # copy EOF dimensions for output variables
+    for var, dim in dims.items():
+        output[dim] = np.copy(fd[dim])
 
     # reduce latitude and longitude to valid and masked points
     indx, indy = np.nonzero(fd["mask"])
@@ -220,7 +242,8 @@ def convert_elastic_heights(
     if ATL15:
         # use ATL15 ice area for scaling
         mosaic = mosaic_ATL15(ATL15)
-        fd["area"] = np.max(mosaic["ice_area"].filled(fill_value=0), axis=0)
+        area = np.max(mosaic["ice_area"].filled(fill_value=0), axis=0)
+        fd["area"] = area if (GRID == "ATL15") else area.T
         logging.debug("Area shape: {0}".format(fd["area"].shape))
     else:
         # scaled areas for polar stereographic distortion
@@ -245,59 +268,80 @@ def convert_elastic_heights(
 
     # attributes for output files
     attributes = {}
-    attributes["units"] = "meters"
     attributes["reference"] = f"Output from {pathlib.Path(sys.argv[0]).name}"
+    # for each variable
+    for var, dim in dims.items():
+        # output EOF spherical harmonic data file for variable
+        FILE = f"{MODEL}{AUX1}_{var}_{AUX2}{SEP}{REGION}{AUX3}_CLM_L{LMAX:d}{order_str}.nc"
+        CLM_FILE = EOF_FILE.with_name(FILE)
+        nEOF = len(fd[dim])
+        # output spatial
+        output[var] = np.ma.zeros((nEOF, *output_shape), fill_value=fv)
+        if CLM_FILE.exists():
+            # read spherical harmonic coefficients from netCDF4 file
+            Ylms = harmonics().from_netCDF4(filename=CLM_FILE)
+            # for each EOF
+            for n in range(nEOF):
+                # convert spherical harmonics to spatial domain
+                # using buffered grid coordinates
+                # use custom UNITS to keep as inputs
+                spatial = gravtk.clenshaw_summation(
+                    Ylms.clm[:, :, n],
+                    Ylms.slm[:, :, n],
+                    bufferlon.flatten(),
+                    buffer_latitude_geocentric.flatten(),
+                    RAD=RAD,
+                    LMAX=LMAX,
+                    UNITS=np.ones((LMAX + 1)),
+                )
+                # reshape to output and save for EOF
+                output[var][n, :, :] = spatial.reshape(output_shape)
+        else:
+            # allocate for output spherical harmonics
+            Ylms = harmonics(lmax=LMAX, mmax=MMAX)
+            Ylms.clm = np.zeros((LMAX + 1, MMAX + 1, nEOF))
+            Ylms.slm = np.zeros((LMAX + 1, MMAX + 1, nEOF))
+            Ylms.num = np.copy(fd[dim])
+            # for each EOF
+            for n in range(nEOF):
+                # reduce data to EOF and scale areas
+                # verify that all values are finite
+                SCALED = np.nan_to_num(
+                    scaling_factors * fd[var][n, indx, indy], 0
+                )
+                # convert scaled values to spherical harmonics
+                # use custom UNITS to keep as inputs but use 4-pi norm
+                YLMS = gravtk.gen_point_load(
+                    SCALED, lon, lat, LMAX=LMAX, MMAX=MMAX, UNITS=UNITS
+                )
+                # copy spherical harmonics for EOF
+                Ylms.clm[:, :, n] = YLMS.clm[:, :].copy()
+                Ylms.slm[:, :, n] = YLMS.slm[:, :].copy()
+                # convert spherical harmonics to spatial domain
+                # using buffered grid coordinates
+                # use custom UNITS to keep as inputs
+                spatial = gravtk.clenshaw_summation(
+                    Ylms.clm[:, :, n],
+                    Ylms.slm[:, :, n],
+                    bufferlon.flatten(),
+                    buffer_latitude_geocentric.flatten(),
+                    RAD=RAD,
+                    LMAX=LMAX,
+                    UNITS=np.ones((LMAX + 1)),
+                )
+                # reshape to output and save for EOF
+                output[var][n, :, :] = spatial.reshape(output_shape)
+            # write spherical harmonic coefficients to netCDF4 file
+            Ylms.to_netCDF4(CLM_FILE, **attributes)
+            # change the permissions mode of the output file to MODE
+            CLM_FILE.chmod(mode=MODE)
 
-    # allocate for output spherical harmonics
-    Ylms = gravtk.harmonics(lmax=LMAX, mmax=MMAX)
-    Ylms.clm = np.zeros((LMAX + 1, MMAX + 1, nt))
-    Ylms.slm = np.zeros((LMAX + 1, MMAX + 1, nt))
-    Ylms.time = np.copy(fd["t"])
-    Ylms.month = gravtk.time.calendar_to_grace(fd["t"])
-
-    # output spatial
-    output["h_el"] = np.ma.zeros((nt, *output_shape))
-    # for each time step
-    for n in range(nt):
-        # reduce data to time and scale areas
-        # note that some values at time points will be 0
-        # due to the time-variable masking of the ATL15 data
-        SCALED = np.nan_to_num(scaling_factors * fd["h_el"][n, indx, indy], 0)
-        # convert scaled values to spherical harmonics
-        # use custom UNITS to keep as inputs but use 4-pi norm
-        YLMS = gravtk.gen_point_load(
-            SCALED, lon, lat, LMAX=LMAX, MMAX=MMAX, UNITS=UNITS
-        )
-        # copy spherical harmonics for time
-        Ylms.clm[:, :, n] = YLMS.clm[:, :].copy()
-        Ylms.slm[:, :, n] = YLMS.slm[:, :].copy()
-
-        # convert spherical harmonics to spatial domain
-        # using buffered grid coordinates
-        # use custom UNITS to keep as inputs
-        spatial = gravtk.clenshaw_summation(
-            Ylms.clm[:, :, n],
-            Ylms.slm[:, :, n],
-            bufferlon.flatten(),
-            buffer_latitude_geocentric.flatten(),
-            RAD=RAD,
-            LMAX=LMAX,
-            UNITS=np.ones((LMAX + 1)),
-        )
-        # reshape to output and save for time
-        output["h_el"][n, :, :] = spatial.reshape(output_shape)
-
-    # output spherical harmonic data file for variable
-    FILE = f"{REGION}{AUX}_CLM_L{LMAX:d}{order_str}.nc"
-    CLM_FILE = INPUT_FILE.with_name(FILE)
-    Ylms.to_netCDF4(CLM_FILE, **attributes)
-    # change the permissions mode of the output file to MODE
-    CLM_FILE.chmod(mode=MODE)
-
-    # output data file
-    FILE = f"{REGION}{AUX}_L{LMAX:d}{order_str}{gw_str}.nc"
-    OUTPUT_FILE = INPUT_FILE.with_name(FILE)
-    output_to_netCDF4(OUTPUT_FILE, output, region=REGION, fields=fields)
+    # output EOF spatial data file
+    FILE = f"{MODEL}{AUX1}_EOF_SMB_FAC_{AUX2}{SEP}{REGION}{AUX3}_L{LMAX:d}{order_str}{gw_str}.nc"
+    OUTPUT_FILE = EOF_FILE.with_name(FILE)
+    output_to_netCDF4(
+        OUTPUT_FILE, output, grid=GRID, model=MODEL, region=REGION
+    )
     # change the permissions mode
     OUTPUT_FILE.chmod(mode=MODE)
 
@@ -305,36 +349,47 @@ def convert_elastic_heights(
 # PURPOSE: output gridded data to netCDF4
 def output_to_netCDF4(output_file, output, **kwargs):
     # set default keyword arguments
+    kwargs.setdefault("grid", "ATL15")
+    kwargs.setdefault("model", "GSFC")
     kwargs.setdefault("region", "gris")
-    kwargs.setdefault("fields", ["h_el"])
 
     # opening NetCDF file for writing
     logging.info(str(output_file))
     fileID = netCDF4.Dataset(output_file, "w", format="NETCDF4")
 
-    # output shape of data
-    nt, ny, nx = np.shape(output["h_el"])
-    dims = (
-        "time",
-        "y",
-        "x",
-    )
-
-    # Defining the NetCDF dimensions
-    fileID.createDimension("x", nx)
-    fileID.createDimension("y", ny)
-    fileID.createDimension("time", nt)
+    # EOF dimension for output variables
+    dims = {
+        "EOF_SMB": "mode_smb",
+        "EOF_FAC": "mode_fac",
+        "MEAN_SMB": "const_smb",
+        "MEAN_FAC": "const_fac",
+    }
 
     # python dictionary with netCDF4 variables
     nc = {}
+    # Defining the NetCDF dimensions
+    fileID.createDimension("x", len(output["x"]))
+    fileID.createDimension("y", len(output["y"]))
     # defining the NetCDF variables
     nc["x"] = fileID.createVariable("x", output["x"].dtype, ("x",))
     nc["y"] = fileID.createVariable("y", output["y"].dtype, ("y",))
-    nc["time"] = fileID.createVariable("time", output["time"].dtype, ("time",))
-    # for each output variable
-    for v in kwargs["fields"]:
-        nc[v] = fileID.createVariable(
-            v, output[v].dtype, dims, fill_value=output[v].fill_value, zlib=True
+    for var, dim in dims.items():
+        # output shape of EOF data
+        if kwargs["grid"] == "ATL15":
+            nEOF, ny, nx = np.shape(output[var])
+            ncdim = (dim, "y", "x")
+        else:
+            nEOF, nx, ny = np.shape(output[var])
+            ncdim = (dim, "x", "y")
+        # create dimensions and variables for EOF data
+        fileID.createDimension(dim, nEOF)
+        nc[dim] = fileID.createVariable(dim, output[dim].dtype, (dim,))
+        nc[var] = fileID.createVariable(
+            var,
+            output[var].dtype,
+            ncdim,
+            fill_value=output[var].fill_value,
+            zlib=True,
         )
 
     # filling NetCDF variables
@@ -381,16 +436,14 @@ def output_to_netCDF4(output_file, output, **kwargs):
     nc["y"].grid_mapping = "Polar_Stereographic"
     nc["y"].units = "meters"
     # Defining attributes for variables
-    for v in kwargs["fields"]:
+    for var, dim in dims.items():
         # set variable attributes
-        nc[v].setncattr("units", "meters")
-        nc[v].setncattr("standard_name", v)
+        nc[var].setncattr("units", "unitless")
         # set grid mapping attribute
-        nc[v].setncattr("grid_mapping", "Polar_Stereographic")
+        nc[var].setncattr("grid_mapping", "Polar_Stereographic")
 
     # global attributes of output netCDF4 file
-    fileID.title = "ICESat-2 ATL11 ATL15 variables"
-    fileID.date_created = time.strftime("%Y-%m-%d", time.localtime())
+    fileID.title = "{0}-FDM EOF variables".format(kwargs["model"])
     fileID.reference = (
         "Medley, B., Neumann, T. A., Zwally, H. J., "
         "Smith, B. E., and Stevens, C. M.: Simulations of Firn Processes "
@@ -398,6 +451,7 @@ def output_to_netCDF4(output_file, output, **kwargs):
         "The Cryosphere, https://doi.org/10.5194/tc-16-3971-2022, 2022."
     )
     fileID.institution = "NASA Goddard Space Flight Center (GSFC)"
+    fileID.date_created = time.strftime("%Y-%m-%d", time.localtime())
     # add software information
     fileID.software_reference = mdlhmc.version.project_name
     fileID.software_version = mdlhmc.version.full_version
@@ -406,13 +460,13 @@ def output_to_netCDF4(output_file, output, **kwargs):
 # PURPOSE: create argument parser
 def arguments():
     parser = argparse.ArgumentParser(
-        description="""Convert heights to
+        description="""Convert SMB and FAC EOFs to
             spherical harmonics and then back to the
             spatial domain after spectral processing
             """
     )
     # command line parameters
-    parser.add_argument("infile", type=pathlib.Path, help="Input data file")
+    parser.add_argument("infile", type=pathlib.Path, help="Input EOF data file")
     # mask file for reducing to regions
     parser.add_argument(
         "--mask",
@@ -484,7 +538,7 @@ def main():
     logging.basicConfig(level=loglevels[args.verbose])
 
     # run program
-    convert_elastic_heights(
+    convert_longterm_eofs(
         args.infile,
         args.lmax,
         MMAX=args.mmax,
