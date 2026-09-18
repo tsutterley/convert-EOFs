@@ -14,20 +14,20 @@ keywords = [
     "satellite geodesy",
 ]
 authors = [
-    {name = "Tyler Sutterley"},
-    {email = "tsutterl@uw.edu"}
+    { name = "Tyler Sutterley" },
+    { email = "tsutterl@uw.edu" },
 ]
 maintainers = [
-    {name = "convert-EOFs contributors"}
+    { name = "convert-EOFs contributors" },
 ]
 license = "MIT"
 license-files = ["LICENSE"]
-readme = {file = "README.md", content-type = "text/markdown"}
+readme = { file = "README.md", content-type = "text/markdown" }
 
 requires-python = "~=3.9"
-dependencies = [ "gravity-toolkit", "model-harmonics", "geoid-toolkit"]
+dependencies = ["gravity-toolkit", "model-harmonics", "geoid-toolkit"]
 
-classifiers=[
+classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
@@ -45,15 +45,15 @@ Repository = "https://github.com/tsutterley/convert-EOFs"
 Issues = "https://github.com/tsutterley/convert-EOFs/issues"
 
 [project.scripts]
-"convert_atl11_atl15_heights.py" = "convert_eofs.convert_atl11_atl15_heights:main" 
-"convert_basin_masks.py" = "convert_eofs.convert_basin_masks:main" 
-"convert_elastic_heights.py" = "convert_eofs.convert_elastic_heights:main" 
-"convert_height_eofs.py" = "convert_eofs.convert_height_eofs:main" 
-"convert_smb_fac_eofs.py" = "convert_eofs.convert_smb_fac_eofs:main" 
-"convert_longterm_eofs.py" = "convert_eofs.convert_longterm_eofs:main" 
+"convert_atl11_atl15_heights.py" = "convert_eofs.convert_atl11_atl15_heights:main"
+"convert_basin_masks.py" = "convert_eofs.convert_basin_masks:main"
+"convert_elastic_heights.py" = "convert_eofs.convert_elastic_heights:main"
+"convert_height_eofs.py" = "convert_eofs.convert_height_eofs:main"
+"convert_smb_fac_eofs.py" = "convert_eofs.convert_smb_fac_eofs:main"
+"convert_longterm_eofs.py" = "convert_eofs.convert_longterm_eofs:main"
 
 [tool.setuptools.packages.find]
-exclude = ["run*",]
+exclude = ["run*"]
 
 [tool.ruff]
 line-length = 80
@@ -86,4 +86,3 @@ fiona = "*"
 pyproj = "*"
 shapely = "*"
 scikit-learn = "*"
-

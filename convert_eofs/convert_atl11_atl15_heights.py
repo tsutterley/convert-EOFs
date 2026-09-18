@@ -10,8 +10,6 @@ from __future__ import print_function
 
 import sys
 import re
-import copy
-import time
 import pyproj
 import logging
 import pathlib
@@ -21,19 +19,11 @@ import warnings
 import numpy as np
 import gravity_toolkit as gravtk
 import model_harmonics as mdlhmc
+from convert_eofs import crs_to_cf
 from convert_eofs.ATL15 import mosaic_ATL15
 
 # ignore pyproj and divide by zero warnings
 warnings.filterwarnings("ignore")
-
-
-# PURPOSE: set the projection parameters based on the region name
-def set_projection(REGION):
-    if REGION in ("ais",):
-        projection_flag = "EPSG:3031"
-    elif REGION in ("gris",):
-        projection_flag = "EPSG:3413"
-    return projection_flag
 
 
 def convert_atl11_atl15_heights(
@@ -104,9 +94,9 @@ def convert_atl11_atl15_heights(
     fd["mask"] &= np.any(np.isfinite(fd["height"]), axis=0)
 
     # pyproj transformer for converting to input coordinates (EPSG)
-    MODEL_EPSG = set_projection(REGION)
+    Polar_Stereographic = crs_to_cf(REGION)
     crs1 = pyproj.CRS.from_string("EPSG:4326")
-    crs2 = pyproj.CRS.from_string(MODEL_EPSG)
+    crs2 = pyproj.CRS.from_string(Polar_Stereographic["spatial_epsg"])
     transformer = pyproj.Transformer.from_crs(crs1, crs2, always_xy=True)
     direction = pyproj.enums.TransformDirection.INVERSE
     # get reference parameters for ellipsoid
@@ -173,175 +163,157 @@ def convert_atl11_atl15_heights(
     # Calculating the Gaussian smoothing for radius RAD
     gw_str = f"_r{RAD:0.0f}km" if (RAD != 0) else ""
 
+    # dictionary describing the output netCDF4 structure
+    struct = dict(dimensions=("time", "y", "x"), variables={})
+
     # attributes for output files
-    attributes = {}
-    attributes["units"] = copy.copy(variable_units)
-    attributes["reference"] = f"Output from {pathlib.Path(sys.argv[0]).name}"
-    # for each variable
-    for var in fields:
-        # allocate for output spherical harmonics
-        Ylms = gravtk.harmonics(lmax=LMAX, mmax=MMAX)
-        Ylms.clm = np.zeros((LMAX + 1, MMAX + 1, nt))
-        Ylms.slm = np.zeros((LMAX + 1, MMAX + 1, nt))
-        Ylms.time = np.copy(fd["time"])
-        Ylms.month = gravtk.time.calendar_to_grace(fd["time"])
-
-        # # input spherical harmonic data file for variable
-        # prefix = re.sub(r'Height', var.title(), PREFIX, re.IGNORECASE)
-        # FILE = f'{prefix}_{REGION}_CLM_L{LMAX:d}{order_str}.nc'
-        # CLM_FILE = INPUT_FILE.with_name(FILE)
-        # Ylms = gravtk.harmonics().from_netCDF4(CLM_FILE)
-
-        # output spatial
-        output[var] = np.ma.zeros((nt, *output_shape), fill_value=fv)
-        # for each time step
-        for n in range(nt):
-            # reduce data to time and scale areas
-            # note that some values at time points will be 0
-            # due to the time-variable masking of the ATL15 data
-            SCALED = np.nan_to_num(scaling_factors * fd[var][n, indx, indy], 0)
-            # convert scaled values to spherical harmonics
-            # use custom UNITS to keep as inputs but use 4-pi norm
-            YLMS = gravtk.gen_point_load(
-                SCALED, lon, lat, LMAX=LMAX, MMAX=MMAX, UNITS=UNITS
-            )
-            # copy spherical harmonics for time
-            Ylms.clm[:, :, n] = YLMS.clm[:, :].copy()
-            Ylms.slm[:, :, n] = YLMS.slm[:, :].copy()
-
-            # convert spherical harmonics to spatial domain
-            # using buffered grid coordinates
-            # use custom UNITS to keep as inputs
-            spatial = gravtk.clenshaw_summation(
-                Ylms.clm[:, :, n],
-                Ylms.slm[:, :, n],
-                bufferlon.flatten(),
-                buffer_latitude_geocentric.flatten(),
-                RAD=RAD,
-                LMAX=LMAX,
-                UNITS=np.ones((LMAX + 1)),
-            )
-            # reshape to output and save for time
-            if var in ("rand_e", "sys_e"):
-                output[var][n, :, :] = np.abs(spatial.reshape(output_shape))
-            else:
-                output[var][n, :, :] = spatial.reshape(output_shape)
-
-        # output spherical harmonic data file for variable
-        prefix = re.sub(r"Height", var.title(), PREFIX, re.IGNORECASE)
-        FILE = f"{prefix}_{SEP}{REGION}_CLM_L{LMAX:d}{order_str}.nc"
-        CLM_FILE = INPUT_FILE.with_name(FILE)
-        Ylms.to_netCDF4(CLM_FILE, **attributes)
-        # change the permissions mode of the output file to MODE
-        CLM_FILE.chmod(mode=MODE)
-
-    # output ATL11/ATL15 data file
-    FILE = f"{PREFIX}_{SEP}{REGION}{AUX}_L{LMAX:d}{order_str}{gw_str}.nc"
-    OUTPUT_FILE = INPUT_FILE.with_name(FILE)
-    output_to_netCDF4(OUTPUT_FILE, output, region=REGION, fields=fields)
-    # change the permissions mode
-    OUTPUT_FILE.chmod(mode=MODE)
-
-
-# PURPOSE: output gridded data to netCDF4
-def output_to_netCDF4(output_file, output, **kwargs):
-    # set default keyword arguments
-    kwargs.setdefault("region", "gris")
-    kwargs.setdefault("fields", ["height"])
-
-    # opening NetCDF file for writing
-    logging.info(str(output_file))
-    fileID = netCDF4.Dataset(output_file, "w", format="NETCDF4")
-
-    # output shape of data
-    nt, ny, nx = np.shape(output["height"])
-    dims = (
-        "time",
-        "y",
-        "x",
-    )
-
-    # Defining the NetCDF dimensions
-    fileID.createDimension("x", nx)
-    fileID.createDimension("y", ny)
-    fileID.createDimension("time", nt)
-
-    # python dictionary with netCDF4 variables
-    nc = {}
-    # defining the NetCDF variables
-    nc["x"] = fileID.createVariable("x", output["x"].dtype, ("x",))
-    nc["y"] = fileID.createVariable("y", output["y"].dtype, ("y",))
-    nc["time"] = fileID.createVariable("time", output["time"].dtype, ("time",))
-    # for each output variable
-    for v in kwargs["fields"]:
-        nc[v] = fileID.createVariable(
-            v, output[v].dtype, dims, fill_value=output[v].fill_value, zlib=True
-        )
-
-    # filling NetCDF variables
-    for key, val in output.items():
-        nc[key][:] = val.copy()
-
-    # create variable and attributes for projection
-    if kwargs["region"] in ("gris",):
-        crs = fileID.createVariable("Polar_Stereographic", np.byte, ())
-        crs.standard_name = "Polar_Stereographic"
-        crs.grid_mapping_name = "polar_stereographic"
-        crs.straight_vertical_longitude_from_pole = -45.0
-        crs.latitude_of_projection_origin = 90.0
-        crs.standard_parallel = 70.0
-        crs.scale_factor_at_projection_origin = 1.0
-        crs.false_easting = 0.0
-        crs.false_northing = 0.0
-        crs.semi_major_axis = 6378.137
-        crs.semi_minor_axis = 6356.752
-        crs.inverse_flattening = 298.257223563
-        crs.spatial_epsg = "3413"
-    elif kwargs["region"] in ("ais",):
-        crs = fileID.createVariable("Polar_Stereographic", np.byte, ())
-        crs.standard_name = "Polar_Stereographic"
-        crs.grid_mapping_name = "polar_stereographic"
-        crs.straight_vertical_longitude_from_pole = 0.0
-        crs.latitude_of_projection_origin = -90.0
-        crs.standard_parallel = -71.0
-        crs.scale_factor_at_projection_origin = 1.0
-        crs.false_easting = 0.0
-        crs.false_northing = 0.0
-        crs.semi_major_axis = 6378.137
-        crs.semi_minor_axis = 6356.752
-        crs.inverse_flattening = 298.257223563
-        crs.spatial_epsg = "3031"
-
-    # Defining attributes for x and y coordinates
-    nc["x"].long_name = "Easting"
-    nc["x"].standard_name = "projection_x_coordinate"
-    nc["x"].grid_mapping = "Polar_Stereographic"
-    nc["x"].units = "meters"
-    nc["y"].long_name = "Northing"
-    nc["y"].standard_name = "projection_y_coordinate"
-    nc["y"].grid_mapping = "Polar_Stereographic"
-    nc["y"].units = "meters"
-    # Defining attributes for variables
-    for v in kwargs["fields"]:
-        # set variable attributes
-        nc[v].setncattr("units", "meters")
-        nc[v].setncattr("standard_name", v)
-        # set grid mapping attribute
-        nc[v].setncattr("grid_mapping", "Polar_Stereographic")
-
-    # global attributes of output netCDF4 file
-    fileID.title = "ICESat-2 ATL11 ATL15 variables"
-    fileID.date_created = time.strftime("%Y-%m-%d", time.localtime())
-    fileID.reference = (
+    attributes = dict(ROOT={})
+    attributes["ROOT"]["title"] = "ICESat-2 ATL11 ATL15 variables"
+    attributes["ROOT"]["authors"] = "Brooke Medley (NASA GSFC)"
+    attributes["ROOT"]["doi"] = "10.5194/tc-16-3971-2022"
+    attributes["ROOT"]["references"] = (
         "Medley, B., Neumann, T. A., Zwally, H. J., "
         "Smith, B. E., and Stevens, C. M.: Simulations of Firn Processes "
         "over the Greenland and Antarctic Ice Sheets: 1980--2021, "
         "The Cryosphere, https://doi.org/10.5194/tc-16-3971-2022, 2022."
     )
-    fileID.institution = "NASA Goddard Space Flight Center (GSFC)"
-    # add software information
-    fileID.software_reference = mdlhmc.version.project_name
-    fileID.software_version = mdlhmc.version.full_version
+    attributes["ROOT"]["institution"] = (
+        "NASA Goddard Space Flight Center (GSFC)"
+    )
+    attributes["ROOT"]["project"] = "GSFC-fdm"
+    attributes["ROOT"]["product_region"] = REGION
+    attributes["ROOT"]["product_name"] = ",".join(fields)
+    attributes["ROOT"]["product_type"] = "gravity_field"
+    # add attributes for maximum degree and order
+    attributes["ROOT"]["max_degree"] = LMAX
+    attributes["ROOT"]["max_order"] = MMAX
+    attributes["ROOT"]["lineage"] = INPUT_FILE.name
+    reference = f"Output from {pathlib.Path(sys.argv[0]).name}"
+    attributes["ROOT"]["reference"] = reference
+    # Defining attributes for x and y coordinates
+    attributes["x"] = dict(
+        long_name="Easting",
+        standard_name="projection_x_coordinate",
+        grid_mapping="Polar_Stereographic",
+        units="meters",
+    )
+    attributes["y"] = dict(
+        long_name="Northing",
+        standard_name="projection_y_coordinate",
+        grid_mapping="Polar_Stereographic",
+        units="meters",
+    )
+    # Defining attributes for date
+    attributes["time"] = dict(
+        long_name="time",
+        standard_name="time",
+        units="decimal years",
+    )
+    # create variable and attributes for projection
+    output["Polar_Stereographic"] = np.byte()
+    struct["variables"]["Polar_Stereographic"] = ()
+    # add projection attributes to dictionary
+    attributes["Polar_Stereographic"] = crs_to_cf(REGION)
+
+    # for each variable
+    for var in fields:
+        # output spherical harmonic data file for variable
+        prefix = re.sub(r"Height", var.title(), PREFIX, re.IGNORECASE)
+        CLM_FILE = INPUT_FILE.with_name(
+            f"{prefix}_{SEP}{REGION}_CLM_L{LMAX:d}{order_str}.nc"
+        )
+        # add to the structure dictionary for output netCDF4 file
+        struct["variables"][var] = ("time", "y", "x")
+        # set variable attributes
+        attributes[var]["units"] = "meters"
+        attributes[var]["standard_name"] = var
+        # set grid mapping attribute
+        attributes[var]["grid_mapping"] = "Polar_Stereographic"
+        # output spatial
+        output[var] = np.ma.zeros((nt, *output_shape), fill_value=fv)
+        if CLM_FILE.exists():
+            # read spherical harmonic coefficients from netCDF4 file
+            Ylms = gravtk.harmonics().from_netCDF4(filename=CLM_FILE)
+            # for each time step
+            for n in range(nt):
+                # convert spherical harmonics to spatial domain
+                # using buffered grid coordinates
+                # use custom UNITS to keep as inputs
+                spatial = gravtk.clenshaw_summation(
+                    Ylms.clm[:, :, n],
+                    Ylms.slm[:, :, n],
+                    bufferlon.flatten(),
+                    buffer_latitude_geocentric.flatten(),
+                    RAD=RAD,
+                    LMAX=LMAX,
+                    UNITS=np.ones((LMAX + 1)),
+                )
+                # reshape to output and save for time
+                output[var][n, :, :] = spatial.reshape(output_shape)
+        else:
+            # allocate for output spherical harmonics
+            Ylms = gravtk.harmonics(lmax=LMAX, mmax=MMAX)
+            Ylms.clm = np.zeros((LMAX + 1, MMAX + 1, nt))
+            Ylms.slm = np.zeros((LMAX + 1, MMAX + 1, nt))
+            Ylms.time = np.copy(fd["time"])
+            Ylms.month = gravtk.time.calendar_to_grace(fd["time"])
+            # for each time step
+            for n in range(nt):
+                # reduce data to time and scale areas
+                # note that some values at time points will be 0
+                # due to the time-variable masking of the ATL15 data
+                SCALED = np.nan_to_num(
+                    scaling_factors * fd[var][n, indx, indy], 0
+                )
+                # convert scaled values to spherical harmonics
+                # use custom UNITS to keep as inputs but use 4-pi norm
+                YLMS = gravtk.gen_point_load(
+                    SCALED,
+                    lon,
+                    lat,
+                    LMAX=LMAX,
+                    MMAX=MMAX,
+                    UNITS=UNITS,
+                )
+                # copy spherical harmonics for time
+                Ylms.clm[:, :, n] = YLMS.clm[:, :].copy()
+                Ylms.slm[:, :, n] = YLMS.slm[:, :].copy()
+
+                # convert spherical harmonics to spatial domain
+                # using buffered grid coordinates
+                # use custom UNITS to keep as inputs
+                spatial = gravtk.clenshaw_summation(
+                    Ylms.clm[:, :, n],
+                    Ylms.slm[:, :, n],
+                    bufferlon.flatten(),
+                    buffer_latitude_geocentric.flatten(),
+                    RAD=RAD,
+                    LMAX=LMAX,
+                    UNITS=np.ones((LMAX + 1)),
+                )
+                # reshape to output and save for time
+                output[var][n, :, :] = spatial.reshape(output_shape)
+
+            # write spherical harmonics to file
+            Ylms.to_netCDF4(
+                CLM_FILE,
+                units=variable_units,
+                reference=reference,
+            )
+            # change the permissions mode of the output file to MODE
+            CLM_FILE.chmod(mode=MODE)
+
+        # fix error variables to be positive to account for ringing
+        if var in ("rand_e", "sys_e"):
+            output[var] = np.abs(output[var])
+
+    # output ATL11/ATL15 data file
+    FILE = f"{PREFIX}_{SEP}{REGION}{AUX}_L{LMAX:d}{order_str}{gw_str}.nc"
+    OUTPUT_FILE = INPUT_FILE.with_name(FILE)
+    # write data to netCDF4 file
+    mdlhmc.spatial.to_netCDF4(OUTPUT_FILE, output, attributes, struct, mode="w")
+    # change the permissions mode
+    OUTPUT_FILE.chmod(mode=MODE)
 
 
 # PURPOSE: create argument parser

@@ -6,6 +6,7 @@ Read and mosaic ICESat-2 ATL15 files
 UPDATE HISTORY:
     Written 06/2026: merged from individual scripts into singular
 """
+
 import re
 import logging
 import netCDF4
