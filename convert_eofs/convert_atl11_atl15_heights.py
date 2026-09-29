@@ -225,6 +225,7 @@ def convert_atl11_atl15_heights(
         # add to the structure dictionary for output netCDF4 file
         struct["variables"][var] = ("time", "y", "x")
         # set variable attributes
+        attributes[var] = {}
         attributes[var]["units"] = "meters"
         attributes[var]["standard_name"] = var
         # set grid mapping attribute
