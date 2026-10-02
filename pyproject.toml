@@ -45,6 +45,7 @@ Repository = "https://github.com/tsutterley/convert-EOFs"
 Issues = "https://github.com/tsutterley/convert-EOFs/issues"
 
 [project.scripts]
+"compute_greens_function.py" = "convert_eofs.compute_greens_function:main"
 "convert_atl11_atl15_heights.py" = "convert_eofs.convert_atl11_atl15_heights:main"
 "convert_basin_masks.py" = "convert_eofs.convert_basin_masks:main"
 "convert_elastic_heights.py" = "convert_eofs.convert_elastic_heights:main"

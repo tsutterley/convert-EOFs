@@ -171,10 +171,11 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2025b-h78e105d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.5.0-pyhd8ed1ab_0.conda
       - pypi: ./
-      - pypi: https://files.pythonhosted.org/packages/2c/a8/7bd3bedaa4d1645c1467f3ee69761169cc5cc315c11934f00150d1efc7c9/gravity_toolkit-1.2.4-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/2d/8c/207a6d8176cd7f70b49736f36cb62a8e33bfe64026390f91c54d5dd74317/geoid_toolkit-1.1.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3e/38/f69b02a6ab85b0d1c28ca67c79c680deec02f417d4845b82cdbb5152f3b5/gravity_toolkit-1.2.7-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9a/74/a655aa3a18dc801068e3f4902900437b2ffcd0453c8513a564b3480fd05b/model_harmonics-1.1.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b1/a4/be8ffbacd70df2a0f0a5dd732eda2606154c6b736798336490003ef35c9a/geoid_toolkit-1.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bd/98/ef2b6fe2903e377cbe870c3b2800d62552f1e3dbe81ce49e1923c53d1c5c/h5py-3.16.0-cp313-cp313-manylinux_2_28_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/d0/89/446044f33aba0348d35e433f56d12206d010a5281a1df54054d4cfb82388/platformdirs-4.12.2-py3-none-any.whl
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/attrs-25.3.0-pyh71513ae_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/boto3-1.40.36-pyhd8ed1ab_0.conda
@@ -314,10 +315,11 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstandard-0.25.0-py313h9734d34_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-h6491c7d_2.conda
       - pypi: ./
-      - pypi: https://files.pythonhosted.org/packages/2c/a8/7bd3bedaa4d1645c1467f3ee69761169cc5cc315c11934f00150d1efc7c9/gravity_toolkit-1.2.4-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/2d/8c/207a6d8176cd7f70b49736f36cb62a8e33bfe64026390f91c54d5dd74317/geoid_toolkit-1.1.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3e/38/f69b02a6ab85b0d1c28ca67c79c680deec02f417d4845b82cdbb5152f3b5/gravity_toolkit-1.2.7-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9a/74/a655aa3a18dc801068e3f4902900437b2ffcd0453c8513a564b3480fd05b/model_harmonics-1.1.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/65/5e088a45d0f43cd814bc5bec521c051d42005a472e804b1a36c48dada09b/h5py-3.16.0-cp313-cp313-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/b1/a4/be8ffbacd70df2a0f0a5dd732eda2606154c6b736798336490003ef35c9a/geoid_toolkit-1.1.4-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/d0/89/446044f33aba0348d35e433f56d12206d010a5281a1df54054d4cfb82388/platformdirs-4.12.2-py3-none-any.whl
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/attrs-25.3.0-pyh71513ae_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/boto3-1.40.36-pyhd8ed1ab_0.conda
@@ -456,10 +458,11 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstandard-0.25.0-py313h5fd188c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-hbeecb71_2.conda
       - pypi: ./
-      - pypi: https://files.pythonhosted.org/packages/2c/a8/7bd3bedaa4d1645c1467f3ee69761169cc5cc315c11934f00150d1efc7c9/gravity_toolkit-1.2.4-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/2d/8c/207a6d8176cd7f70b49736f36cb62a8e33bfe64026390f91c54d5dd74317/geoid_toolkit-1.1.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3e/38/f69b02a6ab85b0d1c28ca67c79c680deec02f417d4845b82cdbb5152f3b5/gravity_toolkit-1.2.7-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9a/74/a655aa3a18dc801068e3f4902900437b2ffcd0453c8513a564b3480fd05b/model_harmonics-1.1.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/b1/a4/be8ffbacd70df2a0f0a5dd732eda2606154c6b736798336490003ef35c9a/geoid_toolkit-1.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c3/d9/a27997f84341fc0dfcdd1fe4179b6ba6c32a7aa880fdb8c514d4dad6fba3/h5py-3.16.0-cp313-cp313-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/d0/89/446044f33aba0348d35e433f56d12206d010a5281a1df54054d4cfb82388/platformdirs-4.12.2-py3-none-any.whl
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_libgcc_mutex-0.1-conda_forge.tar.bz2
   sha256: fe51de6107f9edc7aa4f786a70f4a883943bc9d39b3bb7307c04c41410990726
@@ -5334,27 +5337,49 @@ packages:
   - model-harmonics
   - geoid-toolkit
   requires_python: ~=3.9
-- pypi: https://files.pythonhosted.org/packages/2c/a8/7bd3bedaa4d1645c1467f3ee69761169cc5cc315c11934f00150d1efc7c9/gravity_toolkit-1.2.4-py3-none-any.whl
+- pypi: https://files.pythonhosted.org/packages/3e/38/f69b02a6ab85b0d1c28ca67c79c680deec02f417d4845b82cdbb5152f3b5/gravity_toolkit-1.2.7-py3-none-any.whl
   name: gravity-toolkit
-  version: 1.2.4
-  sha256: e8a6fa4ca6a2958eb3b9d065dd05a34f0d50ac8b7a76b21885378f67805a3cb7
+  version: 1.2.7
+  sha256: 1e391784b9534456e2d3646dc6d33955a8945e6f508ad1f9e231f9bd42cc4905
   requires_dist:
   - boto3
   - future
   - lxml
   - matplotlib
+  - netcdf4
   - numpy
+  - platformdirs
   - python-dateutil
   - pyyaml
-  - scipy
-- pypi: https://files.pythonhosted.org/packages/2d/8c/207a6d8176cd7f70b49736f36cb62a8e33bfe64026390f91c54d5dd74317/geoid_toolkit-1.1.2-py3-none-any.whl
-  name: geoid-toolkit
-  version: 1.1.2
-  sha256: c0496679775827140a15e76d3932d04c57dc74589e2419c6e8962071ccb245a1
-  requires_dist:
-  - lxml
-  - numpy
-  - python-dateutil
+  - scipy>=1.10.1
+  - docutils ; extra == 'doc'
+  - graphviz ; extra == 'doc'
+  - myst-nb ; extra == 'doc'
+  - numpydoc ; extra == 'doc'
+  - sphinx ; extra == 'doc'
+  - sphinx-argparse>=0.4 ; extra == 'doc'
+  - sphinxcontrib-bibtex ; extra == 'doc'
+  - sphinx-design ; extra == 'doc'
+  - sphinx-rtd-theme ; extra == 'doc'
+  - geoid-toolkit ; extra == 'all'
+  - h5py ; extra == 'all'
+  - jupyterlab ; extra == 'all'
+  - jupyterlab-widgets ; extra == 'all'
+  - notebook ; extra == 'all'
+  - dask ; extra == 'aws'
+  - obstore ; extra == 'aws'
+  - pyarrow ; extra == 'aws'
+  - s3fs ; extra == 'aws'
+  - zarr>=3 ; extra == 'aws'
+  - flake8 ; extra == 'dev'
+  - pytest>=4.6 ; extra == 'dev'
+  - pytest-cov ; extra == 'dev'
+  - pytest-xdist ; extra == 'dev'
+  - cartopy ; extra == 'map'
+  - gdal ; extra == 'map'
+  - pyshp ; extra == 'map'
+  - shapely ; extra == 'map'
+  requires_python: ~=3.6
 - pypi: https://files.pythonhosted.org/packages/9a/74/a655aa3a18dc801068e3f4902900437b2ffcd0453c8513a564b3480fd05b/model_harmonics-1.1.3-py3-none-any.whl
   name: model-harmonics
   version: 1.1.3
@@ -5391,6 +5416,38 @@ packages:
   requires_dist:
   - numpy>=1.21.2
   requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/b1/a4/be8ffbacd70df2a0f0a5dd732eda2606154c6b736798336490003ef35c9a/geoid_toolkit-1.1.4-py3-none-any.whl
+  name: geoid-toolkit
+  version: 1.1.4
+  sha256: 0f2ac318bdc9c9dc7bef70b4134ce8c1421b1f50c6a0ded2759193721ba47f9b
+  requires_dist:
+  - lxml
+  - numpy
+  - platformdirs
+  - python-dateutil
+  - cartopy ; extra == 'all'
+  - gdal ; extra == 'all'
+  - h5py ; extra == 'all'
+  - jupyterlab ; extra == 'all'
+  - matplotlib ; extra == 'all'
+  - netcdf4 ; extra == 'all'
+  - notebook ; extra == 'all'
+  - pyproj ; extra == 'all'
+  - docutils ; extra == 'doc'
+  - graphviz ; extra == 'doc'
+  - myst-nb ; extra == 'doc'
+  - numpydoc ; extra == 'doc'
+  - sphinx-autobuild ; extra == 'doc'
+  - sphinx-argparse>=0.4 ; extra == 'doc'
+  - sphinxcontrib-bibtex ; extra == 'doc'
+  - sphinx-design ; extra == 'doc'
+  - sphinx-rtd-theme ; extra == 'doc'
+  - flake8 ; extra == 'dev'
+  - pytest>=4.6 ; extra == 'dev'
+  - pytest-cov ; extra == 'dev'
+  - pytest-xdist ; extra == 'dev'
+  - scipy ; extra == 'dev'
+  requires_python: ~=3.6
 - pypi: https://files.pythonhosted.org/packages/bd/98/ef2b6fe2903e377cbe870c3b2800d62552f1e3dbe81ce49e1923c53d1c5c/h5py-3.16.0-cp313-cp313-manylinux_2_28_x86_64.whl
   name: h5py
   version: 3.16.0
@@ -5404,4 +5461,9 @@ packages:
   sha256: 18f2bbcd545e6991412253b98727374c356d67caa920e68dc79eab36bf5fedad
   requires_dist:
   - numpy>=1.21.2
+  requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/d0/89/446044f33aba0348d35e433f56d12206d010a5281a1df54054d4cfb82388/platformdirs-4.12.2-py3-none-any.whl
+  name: platformdirs
+  version: 4.12.2
+  sha256: 29dbf06d96c500bc6bdbce75fb0a14d63279c93b1842f97e72a135b33e856983
   requires_python: '>=3.10'
